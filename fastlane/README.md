@@ -23,10 +23,10 @@ For _fastlane_ installation instructions, see [Installing _fastlane_](https://do
 
 Android – Deploy
 
-### android zip_android_builds
+### android zip_builds
 
 ```sh
-[bundle exec] fastlane android zip_android_builds
+[bundle exec] fastlane android zip_builds
 ```
 
 Android – Zip Builds
@@ -116,10 +116,10 @@ Standalone – Sign Mac Build
 
 Standalone – Notarize Mac Build
 
-### mac zip_standalone_builds
+### mac zip_builds
 
 ```sh
-[bundle exec] fastlane mac zip_standalone_builds
+[bundle exec] fastlane mac zip_builds
 ```
 
 Standalone – Zip Builds
@@ -177,10 +177,10 @@ iOS – Set Version
 
 iOS – Build in XCode
 
-### ios zip_ios_builds
+### ios zip_builds
 
 ```sh
-[bundle exec] fastlane ios zip_ios_builds
+[bundle exec] fastlane ios zip_builds
 ```
 
 iOS – Zip Builds

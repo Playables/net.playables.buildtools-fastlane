@@ -104,28 +104,45 @@ Dir.chdir("..") do
 			append += "-withchanges"
 		end
 
-		 return "#{version}-#{git_commit}#{append}-#{platform}"
+		 return File.join("#{version}-#{git_commit}","#{version}-#{git_commit}#{append}-#{platform}")
 	end
 
 	def zipIt(src_dir,dst)
 
-		UI.message "Zipping (dist)#{src_dir} to #{dst}"
+		debug_file_list = ["*_BurstDebugInformation_DoNotShip*","*.debug","*.dSYM.zip","*.pdb"]
+
+		UI.message "Zipping (dist)#{src_dir} to #{dst}..."
 		out_path = dst+".zip"
 		sh("rm -f \"#{out_path}\"")
 		zip(
 		  path: src_dir,
 		  output_path:out_path,
-		  exclude: [".DS_Store","*_BurstDebugInformation_DoNotShip*","*.debug","*.dSYM.zip",".pdb"]
+		  exclude: [".DS_Store"].concat(debug_file_list)
 		)
 
-		UI.message "Zipping (full) #{src_dir} to #{dst}"
-		out_path_debug = dst+"-debug.zip"
-		sh("rm -f \"#{out_path_debug}\"")
-		zip(
-		  path: src_dir,
-		  output_path:out_path_debug,
-		  exclude: [".DS_Store"]
-		)
+		debug_file_found = false
+		for pattern in debug_file_list do   
+
+puts Dir.glob(File.join(src_dir,pattern))
+			if Dir.glob(File.join(src_dir,pattern)).length > 0
+				debug_file_found = true
+				break
+			end 
+		end   
+
+		if debug_file_found == true
+			UI.message "Debug files found, creating debug package..."
+
+			UI.message "Zipping #{src_dir} to #{dst}..."
+			out_path_debug = dst+"-debug.zip"
+			sh("rm -f \"#{out_path_debug}\"")
+			zip(
+			  path: src_dir,
+			  output_path:out_path_debug,
+			  include: debug_file_list,
+			  exclude: [".DS_Store"]
+			)
+		end
 	end
 
 
@@ -173,7 +190,7 @@ Dir.chdir("..") do
 					when "appbundle" then
 						build_unity_appbundle(version:version)
 				end
-				zip_android_builds
+				zip_builds
 				upload_googleplay
 			rescue => ex
 				send_mail false,"Android Deploy failed",ex.to_s
@@ -185,7 +202,7 @@ Dir.chdir("..") do
 		end
 
 		desc "Android – Zip Builds"
-		lane :zip_android_builds do
+		lane :zip_builds do
 
 			zipIt(unity_android_withoutobb_build_path_base, File.join(archive_path,getArchiveName("android-apk")))
 
@@ -300,7 +317,7 @@ Dir.chdir("..") do
 				build_unity
 				sign_mac
 				notarize_mac
-				zip_standalone_builds
+				zip_builds
 
 				if steam_deploy_enabled
 					sync_upload_steam
@@ -382,7 +399,7 @@ Dir.chdir("..") do
 		end
 
 		desc "Standalone – Zip Builds"
-		lane :zip_standalone_builds do
+		lane :zip_builds do
 
 			zipIt(unity_linux_build_path_base,File.join(archive_path,getArchiveName("linux")))
 			zipIt(unity_macos_build_path_base,File.join(archive_path,getArchiveName("macos")))
@@ -445,7 +462,7 @@ Dir.chdir("..") do
 				build_unity
 				set_version
 				build_xcode
-				zip_ios_builds
+				zip_builds
 				upload_testflight_internal
 
 			rescue => ex
@@ -508,7 +525,7 @@ Dir.chdir("..") do
 			sh("rm -rf #{debug_target}; cp -R \"#{debug_source}\" \"#{ios_xcode_output_path}/\"")
 		end
 		desc "iOS – Zip Builds"
-		lane :zip_ios_builds do
+		lane :zip_builds do
 
 			zipIt(ios_xcode_output_path,File.join(archive_path,getArchiveName("ios")))
 		end

@@ -40,6 +40,7 @@ module Fastlane
 
          build_path_parent = File.dirname(build_path)
 
+         sh("mkdir -p #{build_path_parent}")
          sh("echo #{version} > #{File.join(build_path_parent,"version")}")
 
         git_commit = sh("cd #{project_path};git rev-parse HEAD | tr -d '\n'")

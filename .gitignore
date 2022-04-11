@@ -1,0 +1,16 @@
+
+.DS_Store
+*.env
+*.cer
+*.mobileprovision
+*.app.dSYM.zip
+*.ipa
+*.p12
+*.certSigningRequest
+/unity_builds
+/archive
+
+Gemfile.lock
+
+/fastlane/Preview.html
+/fastlane/report.xml

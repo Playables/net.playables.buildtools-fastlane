@@ -1,0 +1,9 @@
+# For more information about the Appfile, see:
+#     https://docs.fastlane.tools/advanced/#appfile
+
+app_identifier ENV["IOS_APP_IDENTIFIER"] # The bundle identifier of your app
+apple_id ENV["IOS_APPLE_ID"]# Your Apple email address
+itc_team_id ENV["IOS_ITC_TEAM_ID"] # App Store Connect Team ID
+team_id ENV["IOS_DEV_TEAM_ID"] # Developer Portal Team ID
+package_name ENV["GOOGLE_PLAY_PACKAGE_NAME"]
+json_key_file ENV["GOOGLE_PLAY_JSON_KEY"]

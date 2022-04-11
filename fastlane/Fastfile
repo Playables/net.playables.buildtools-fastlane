@@ -1,0 +1,546 @@
+# This file contains the fastlane.tools configuration
+# You can find the documentation at https://docs.fastlane.tools
+#
+# For a list of all available actions, check out
+#
+#     https://docs.fastlane.tools/actions
+#
+# For a list of all available plugins, check out
+#
+#     https://docs.fastlane.tools/plugins/available-plugins
+#
+
+# Uncomment the line if you want fastlane to automatically update itself
+# update_fastlane
+
+Dir.chdir("..") do
+	
+	if ENV["ENV_PATH"]
+
+		env_location = ENV["ENV_PATH"]
+
+	    puts "Load .env file at #{ File.expand_path(ENV["ENV_PATH"])}"
+
+	    Dotenv.overload env_location+".default"
+	    Dotenv.overload env_location
+
+	    environment = lane_context[SharedValues::ENVIRONMENT]
+	    unless environment.nil?
+	        puts "Load .env file at #{environment}"
+	        Dotenv.overload env_location + environment
+	    end
+	  end
+
+
+	
+	# app name
+	app_name_short = ENV["APP_NAME_SHORT"]
+
+	# unity build paths
+	unity_builds_path = File.expand_path(ENV["UNITY_BUILDS_PATH"])
+
+	unity_android_appbundle_build_path_base = File.join(unity_builds_path,"android","appbundle")
+	unity_android_withobb_build_path_base = File.join(unity_builds_path,"android","with-obb")
+	unity_android_withoutobb_build_path_base = File.join(unity_builds_path,"android","without-obb")
+	unity_macos_build_path_base = File.join(unity_builds_path,"macos")
+	unity_win_build_path_base = File.join(unity_builds_path,"win")
+	unity_linux_build_path_base= File.join(unity_builds_path,"linux")
+	unity_ios_build_path_base = File.join(unity_builds_path,"ios")
+
+	ios_xcode_output_path = File.join(unity_ios_build_path_base,"ipa")
+
+	unity_android_appbundle_build_path = File.join(unity_android_appbundle_build_path_base,app_name_short+".aab")
+	unity_android_withobb_build_path = File.join(unity_android_withobb_build_path_base,app_name_short+".apk")
+	unity_android_withoutobb_build_path = File.join(unity_android_withoutobb_build_path_base,app_name_short+".apk")	
+	unity_macos_build_path = File.join(unity_macos_build_path_base,app_name_short+".app")
+	unity_win_build_path = File.join(unity_win_build_path_base,app_name_short+".exe")
+	unity_linux_build_path = File.join(unity_linux_build_path_base,app_name_short)
+	unity_ios_build_path = File.join(unity_ios_build_path_base,app_name_short)
+
+
+	archive_path = File.expand_path(ENV["ARCHIVE_PATH"])
+
+	# unity project path
+	unity_project_path = File.expand_path(ENV["FL_UNITY_PROJECT_PATH"])
+
+	# google play
+	google_play_mode = ENV["GOOGLE_PLAY_MODE"]
+
+	store_googleplay_path = File.expand_path(ENV["GOOGLE_PLAY_STOREDATA_PATH"])
+
+	# ios
+	store_ios_path = File.expand_path(ENV["IOS_STOREDATA_PATH"])
+	store_ios_screenshots_path = File.join(store_ios_path,"screenshots")
+	store_ios_metadata_path = File.join(store_ios_path,"metadata")
+	store_ios_project_path = File.join(unity_ios_build_path,"Unity-iPhone.xcodeproj")
+
+	# steam
+	store_steam_content_path = File.expand_path(ENV["STEAM_CONTENT_PATH"])
+	store_steam_content_linux_path = File.join(store_steam_content_path,"linux")
+	store_steam_content_win_path = File.join(store_steam_content_path,"win")
+	store_steam_content_macos_path = File.join(store_steam_content_path,"macos")
+	store_steam_vdf_path = File.expand_path(ENV["STEAM_VDF_PATH"])
+	store_steam_validate_url = "steam://validate/"+ENV["APP_STEAM_ID"]
+	steam_deploy_enabled = ENV["STEAM_DEPLOY_ENABLED"] == "true"
+
+	#itch
+	itch_deploy_enabled = ENV["ITCH_DEPLOY_ENABLED"] == "true"
+
+
+	def getArchiveName(platform)
+
+
+		git_commit = sh("git rev-parse HEAD | tr -d '\n'")
+		git_changes = !sh("git status --porcelain | tr -d '\n'").empty?
+		archive_metadata = get_unity_bundle_version()
+
+		version = get_unity_bundle_version()
+
+		UI.message "zipping version #{version} with commit hash #{git_commit} changes=#{git_changes}"
+
+		append=""
+
+		if git_changes
+			append += "-withchanges"
+		end
+
+		 return "#{version}-#{git_commit}#{append}-#{platform}"
+	end
+
+	def zipIt(src_dir,dst)
+
+		UI.message "Zipping (dist)#{src_dir} to #{dst}"
+		out_path = dst+".zip"
+		sh("rm -f \"#{out_path}\"")
+		zip(
+		  path: src_dir,
+		  output_path:out_path,
+		  exclude: [".DS_Store","*_BurstDebugInformation_DoNotShip*","*.debug","*.dSYM.zip",".pdb"]
+		)
+
+		UI.message "Zipping (full) #{src_dir} to #{dst}"
+		out_path_debug = dst+"-debug.zip"
+		sh("rm -f \"#{out_path_debug}\"")
+		zip(
+		  path: src_dir,
+		  output_path:out_path_debug,
+		  exclude: [".DS_Store"]
+		)
+	end
+
+
+	#print unity_builds_path
+	#print "\n"
+	#print unity_project_path
+	#print "\n"
+	#print archive_path
+	#print "\n"
+
+	def send_mail(success,subject,message,app_link="")
+
+		mailgun_apikey_file = ENV["MAILGUN_API_KEY_FILE"]
+		mailgun_apikey_file_fullpath = File.expand_path(mailgun_apikey_file)
+		if(!File.file?(mailgun_apikey_file_fullpath))
+			UI.message "No mailgun key file found at #{mailgun_apikey_file_fullpath}, skipping notification mail."
+			return
+		end
+		mailgun_apikey = File.open( mailgun_apikey_file_fullpath, &:readline).gsub(/\s+/, "")
+		mailgun(
+			apikey:mailgun_apikey,
+			from:ENV["APP_NAME_NICE"]+" Build Status",
+			subject:subject,
+			success: success,
+			message: subject+"<br>"+message,
+			app_link: app_link
+		)
+	end
+
+
+	default_platform(:ios)
+
+	platform :android do
+
+		desc "Android – Deploy"
+		lane :deploy do
+
+			begin
+				version = set_version
+				build_unity_withoutobb(version:version)
+
+				case google_play_mode
+					when "apkwithobb" then
+						build_unity_withobb(version:version)
+					when "appbundle" then
+						build_unity_appbundle(version:version)
+				end
+				zip_android_builds
+				upload_googleplay
+			rescue => ex
+				send_mail false,"Android Deploy failed",ex.to_s
+				raise ex
+			end
+				
+			send_mail true,"Android Deploy successful","It is now available on Google Play","https://play.google.com/store/apps/details?id="+CredentialsManager::AppfileConfig.try_fetch_value(:package_name)
+
+		end
+
+		desc "Android – Zip Builds"
+		lane :zip_android_builds do
+
+			zipIt(unity_android_withoutobb_build_path_base, File.join(archive_path,getArchiveName("android-apk")))
+
+			case google_play_mode
+				when "apkwithobb" then
+					zipIt(unity_android_withobb_build_path_base, File.join(archive_path,getArchiveName("android-apkwithobb")))
+				when "appbundle" then
+					zipIt(unity_android_appbundle_build_path_base,File.join(archive_path,getArchiveName("android-appbundle")))
+			end
+		end
+
+
+		desc "Android – Set version"
+		lane :set_version do
+
+		prev_versions = google_play_track_version_codes(track:"internal")
+		if prev_versions[0]
+			new_version = prev_versions[0]+1
+		else
+			prev_versions = google_play_track_version_codes(track:"production") # production
+			if prev_versions[0]
+				new_version = prev_versions[0]+1
+			else
+				new_version = 1
+			end
+		end
+		new_version
+		end
+
+
+		desc "Android (apk without obb) – Build in Unity"
+		lane :build_unity_withoutobb do |options|
+
+			version = options[:version] || 1
+			unity_build(
+				build_target: "Android",
+				build_path: unity_android_withoutobb_build_path,
+				obb:0,
+			build_version: version.to_s )
+		end
+
+
+
+		desc "Android (apk with obb) – Build in Unity"
+		lane :build_unity_withobb do |options|
+
+			version = options[:version] || 1
+			unity_build(
+				build_target: "Android",
+				build_path: unity_android_withobb_build_path,
+				obb:1,
+			build_version: version.to_s )
+		end
+
+
+		desc "Android (appbundle) – Build in Unity"
+		lane :build_unity_appbundle do |options|
+
+			version = options[:version] || 1
+			unity_build(
+				build_target: "Android",
+				build_path: unity_android_appbundle_build_path,
+				android_app_bundle:1,
+			build_version: version.to_s )
+		end
+
+		desc "Android – Upload to google play (internal)"
+		lane :upload_googleplay do
+			track = "internal"
+
+			case google_play_mode
+			when "apk" then
+				upload_to_play_store(
+					track:track,
+					apk:unity_android_withoutobb_build_path,
+					skip_upload_metadata:true,
+					skip_upload_images:true,
+				skip_upload_screenshots:true)
+			when "apkwithobb" then
+				upload_to_play_store(
+					track:track,
+					apk:unity_android_withobb_build_path,
+					skip_upload_metadata:true,
+					skip_upload_images:true,
+				skip_upload_screenshots:true)
+			when "appbundle" then
+				upload_to_play_store(
+					track:track,
+					aab:unity_android_appbundle_build_path,
+					skip_upload_metadata:true,
+					skip_upload_images:true)
+			end
+				
+		end
+
+		desc "Android – Upload to google play (metadata)"
+		lane :upload_googleplay_metadata do
+			upload_to_play_store(
+				metadata_path:store_googleplay_path
+			)
+		end
+
+	end
+	platform :mac do
+
+		desc "Standalone – Deploy"
+		lane :deploy do
+
+			# send_mail true,"Standalone Deploy started","",store_steam_validate_url
+
+			begin
+				build_unity
+				sign_mac
+				notarize_mac
+				zip_standalone_builds
+
+				if steam_deploy_enabled
+					sync_upload_steam
+				end
+
+				if itch_deploy_enabled
+					push_itch
+				end
+			rescue => ex
+				send_mail false,"Standalone Deploy failed",ex.to_s
+				raise ex
+			end
+
+			send_mail true,"Standalone Deploy successful","It is now available on Steam",store_steam_validate_url
+
+		end
+	 
+		desc "Standalone – Build in Unity"
+		lane :build_unity do
+
+
+			unity_build(
+				build_target: "StandaloneOSX",
+				build_path: unity_macos_build_path
+			)
+
+
+			unity_build(
+				build_target: "StandaloneWindows64",
+				build_path: unity_win_build_path
+				 )
+
+
+			unity_build(
+				build_target: "StandaloneLinux64",
+				build_path: unity_linux_build_path
+			)
+		end
+
+		desc "Standalone – Sign Mac Build"
+		lane :sign_mac do
+
+			UI.message ENV["CODESIGN_ADDITIONAL_BUNDLES"]
+
+
+			additionalBundles = (ENV["CODESIGN_ADDITIONAL_BUNDLES"] || "").split(/\s*,\s*/)
+			additionalBundles.each do |b|
+			  codesign_mac(
+			  	target:File.join(unity_macos_build_path,b)
+			  	)
+			end
+			
+			codesign_mac(
+				target:unity_macos_build_path,
+				)
+			gatekeeper_verify(
+				target:unity_macos_build_path)
+		end
+
+		desc "Standalone – Notarize Mac Build"
+		lane :notarize_mac do
+
+			serviceName = "XCODE_NOTARIZE_PASSWORD"
+			accountName = ENV["FL_NOTARIZE_USERNAME"]
+			cmd = "security find-generic-password -a #{accountName} -s #{serviceName} -w -g | tr -d '\n'"
+			#UI.message cmd
+			ENV["FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD"] = sh(
+				command:cmd,
+				log:false)
+
+			notarize(
+				package:unity_macos_build_path,
+				print_log:true)
+
+			sh("rm #{unity_macos_build_path}.zip")
+
+			gatekeeper_verify(
+				target:unity_macos_build_path)
+		end
+
+		desc "Standalone – Zip Builds"
+		lane :zip_standalone_builds do
+
+			zipIt(unity_linux_build_path_base,File.join(archive_path,getArchiveName("linux")))
+			zipIt(unity_macos_build_path_base,File.join(archive_path,getArchiveName("macos")))
+			zipIt(unity_win_build_path_base,File.join(archive_path,getArchiveName("win")))
+		end
+
+		desc "Standalone – Sync Builds & Upload to Steam"
+		lane :sync_upload_steam do
+
+
+			def sync(src_dir,dst_dir)
+				fastlane_require 'fileutils'
+				fastlane_require 'shellwords'
+				FileUtils.mkdir_p dst_dir # this runs from the fastlane dir
+
+				rsync(
+					extra:"-ahrLv --delete --exclude=.DS_Store --exclude=steam_appid.txt --exclude=*_BurstDebugInformation_DoNotShip --exclude=*.pdb --exclude=*.debug",
+					source:(src_dir+'/').shellescape,
+				destination:(dst_dir+'/').shellescape)
+			end
+
+			sync(unity_linux_build_path_base,store_steam_content_linux_path);
+			sync(unity_macos_build_path_base,store_steam_content_macos_path);
+			sync(unity_win_build_path_base,store_steam_content_win_path);
+
+			upload_to_steam(
+				vdf_path: store_steam_vdf_path
+			)
+		end
+		desc "Standalone – Push with itch.io butler"
+		lane :push_itch do
+
+			butler_push(
+				data_path: unity_linux_build_path_base,
+				channel:"linux",
+			)
+			butler_push(
+				data_path: unity_macos_build_path_base,
+				channel:"macos",
+			)
+			butler_push(
+				data_path: unity_win_build_path_base,
+				channel:"win",
+			)
+		end
+
+	end
+
+
+	platform :ios do
+
+		desc "iOS – Deploy"
+		lane :deploy do
+			app_id = "0"# replace
+
+			testflight_link = "https://beta.itunes.apple.com/v1/app/"+app_id
+		#send_mail true,"iOS Build started","",testflight_link
+	 
+			begin
+				build_unity
+				set_version
+				build_xcode
+				zip_ios_builds
+				upload_testflight_internal
+
+			rescue => ex
+				send_mail false,"iOS Build failed",ex.to_s
+				raise ex
+			end
+
+			
+			send_mail true,"iOS Build successful","It will soon be available on testflight",testflight_link
+		end
+
+		desc "iOS – Build in Unity"
+		lane :build_unity do
+			unity_build(
+				project_path: unity_project_path,
+				build_target: "iOS",
+				build_path: unity_ios_build_path
+				 )
+		end
+
+
+
+		desc "iOS – Set Version"
+		lane :set_version do
+			scheme = "Unity-iPhone"
+
+		 latest_build_number = latest_testflight_build_number(
+				app_identifier: CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier),
+				version: get_version_number(xcodeproj: store_ios_project_path, target: 'Unity-iPhone')
+		)
+		 increment_build_number({build_number: latest_build_number + 1,xcodeproj:store_ios_project_path})
+		 end
+
+		desc "iOS – Build in XCode"
+		lane :build_xcode do
+			scheme = "Unity-iPhone"
+
+		  
+			 get_certificates(
+			 	output_path:"certificates"
+			 )   
+			 get_provisioning_profile(
+			 	output_path: "provisioning_profiles"
+			 ) 
+			 if ENV["IOS_USE_STICKERS"] == "true"
+		    		get_provisioning_profile(app_identifier: "#{ENV['IOS_APP_IDENTIFIER']}.Stickers")
+			end
+
+			build_app(
+				output_directory:ios_xcode_output_path,
+				xcargs: "-allowProvisioningUpdates",
+				export_team_id:ENV["IOS_DEV_TEAM_ID"],
+				silent:true,
+				scheme: scheme,
+			project:store_ios_project_path)
+
+			debugInfoFile = "#{app_name_short}_BurstDebugInformation_DoNotShip"
+			debug_source = File.join(unity_ios_build_path_base,debugInfoFile)
+			debug_target = File.join(ios_xcode_output_path,debugInfoFile)
+			sh("rm -rf #{debug_target}; cp -R \"#{debug_source}\" \"#{ios_xcode_output_path}/\"")
+		end
+		desc "iOS – Zip Builds"
+		lane :zip_ios_builds do
+
+			zipIt(ios_xcode_output_path,File.join(archive_path,getArchiveName("ios")))
+		end
+		
+		desc "iOS – Push ipa to TestFlight (Internal, skip processing)"
+		lane :upload_testflight_internal do
+			upload_to_testflight(skip_waiting_for_build_processing:true)
+		end
+
+		desc "iOS – Submit App Store info (including Screenshots)"
+		lane :submit_info do
+			deliver(
+				skip_binary_upload: true,
+				screenshots_path:ios_screenshots_path,
+				metadata_path:ios_metadata_path
+			)
+		end
+
+		desc "send mail test"
+		lane :mail_test do
+
+			begin
+				#raise 'An error has occured'
+
+			rescue => ex
+				send_mail false,"Error",ex.to_s,""
+				raise ex
+			end
+
+			send_mail true,"Success","Message","https://playables.net"
+
+		end
+
+	end
+end

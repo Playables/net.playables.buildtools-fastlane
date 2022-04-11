@@ -98,13 +98,13 @@ Dir.chdir("..") do
 
 		UI.message "zipping version #{version} with commit hash #{git_commit} changes=#{git_changes}"
 
-		append=""
+		base_name="#{version}-#{git_commit}"
 
 		if git_changes
-			append += "-withchanges"
+			base_name += "-withchanges"
 		end
 
-		 return File.join("#{version}-#{git_commit}","#{version}-#{git_commit}#{append}-#{platform}")
+		 return File.join(base_name,"#{base_name}-#{platform}")
 	end
 
 	def zipIt(src_dir,dst)

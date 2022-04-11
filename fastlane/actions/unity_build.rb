@@ -38,9 +38,9 @@ module Fastlane
         version = other_action.get_unity_bundle_version()
          UI.message "Bundle version: #{version}"
 
-         build_path_parent = File.join(build_path,"..")
+         build_path_parent = File.dirname(build_path)
 
-         sh("cd #{build_path_parent}; echo #{version} > version")
+         sh("echo #{version} > #{File.join(build_path_parent,"version")}")
 
         git_commit = sh("cd #{project_path};git rev-parse HEAD | tr -d '\n'")
          UI.message "Git commit: #{git_commit}"
@@ -52,7 +52,7 @@ module Fastlane
             git_commit += "-withchanges"
           end
 
-         sh("cd #{build_path_parent}; echo #{git_commit} > commit")
+         sh("echo #{git_commit} > #{File.join(build_path_parent,"commit")}")
 
         cmd = [unity_path,
           "-batchmode",

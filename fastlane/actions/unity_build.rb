@@ -25,13 +25,34 @@ module Fastlane
       
        projectsettings_text = File.open(projectsettings_path, &:readline)
         unity_version = projectsettings_text.split(':')[1].gsub(/\s+/, "")
+
         UI.message "Unity version: #{unity_version}"
 
         unity_path = "/Applications/Unity/Hub/Editor/#{unity_version}/Unity.app/Contents/MacOS/Unity"
         UI.message "Unity path: #{unity_path}"
         UI.user_error!("Unity version #{unity_version} not found. Couldn't find file at path '#{unity_path}'") unless File.exist?(unity_path)
         
-        UI.message "Unity build: #{build_target} -> #{build_path}"
+        UI.message "Build target: #{build_target}"
+        UI.message "Build path: #{build_path}"
+
+        version = other_action.get_unity_bundle_version()
+         UI.message "Bundle version: #{version}"
+
+         build_path_parent = File.join(build_path,"..")
+
+         sh("cd #{build_path_parent}; echo #{version} > version")
+
+        git_commit = sh("cd #{project_path};git rev-parse HEAD | tr -d '\n'")
+         UI.message "Git commit: #{git_commit}"
+
+        git_changes = !sh("cd #{project_path};git status --porcelain | tr -d '\n'").empty?
+         UI.message "Git repository has changes: #{git_changes}"
+
+         if git_changes
+            git_commit += "-withchanges"
+          end
+
+         sh("cd #{build_path_parent}; echo #{git_commit} > commit")
 
         cmd = [unity_path,
           "-batchmode",
@@ -82,27 +103,7 @@ module Fastlane
           UI.user_error! "Unity build failed."
         end
 
-        if debug_path != ""
-          UI.message "Moving Debug Info "+debug_path
-          
-          sh(
-            "rm -rf \"#{debug_path}\";"+
-            "mkdir -p \"#{debug_path}\";")
-
-          move = lambda do |f|
-            UI.message "Try moving debug file #{f}";
-            
-            "cd \"#{File.join(build_path,"..")}\";"+
-            "if [ -f \"#{f}\" ] || [ -d \"#{f}\" ]; then "+
-            "mv #{f} #{debug_path};"+
-            "fi;"
-          end
-
-          sh(move.call( "#{build_name}_BurstDebugInformation_DoNotShip"))
-          sh(move.call("UnityPlayer_s.debug"))
-          sh(move.call("LinuxPlayer_s.debug"))
-
-         end
+       
 
 
         # Actions.lane_context[SharedValues::UNITY_BUILD_CUSTOM_VALUE] = "my_val"

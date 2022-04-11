@@ -87,31 +87,19 @@ Dir.chdir("..") do
 	itch_deploy_enabled = ENV["ITCH_DEPLOY_ENABLED"] == "true"
 
 
-	def getArchiveName(platform)
-
-
-		git_commit = sh("git rev-parse HEAD | tr -d '\n'")
-		git_changes = !sh("git status --porcelain | tr -d '\n'").empty?
-		archive_metadata = get_unity_bundle_version()
-
-		version = get_unity_bundle_version()
-
-		UI.message "zipping version #{version} with commit hash #{git_commit} changes=#{git_changes}"
-
-		base_name="#{version}-#{git_commit}"
-
-		if git_changes
-			base_name += "-withchanges"
-		end
-
-		 return File.join(base_name,"#{base_name}-#{platform}")
-	end
-
-	def zipIt(src_dir,dst)
+	def zipIt(src_dir,archive_path,platform)
 
 		debug_file_list = ["*_BurstDebugInformation_DoNotShip*","*.debug","*.dSYM.zip","*.pdb"]
 
-		UI.message "Zipping (dist)#{src_dir} to #{dst}..."
+		build_base_path = File.join(src_dir,"..")
+		git_commit = sh("cd #{build_base_path};cat commit | tr -d '\n'")
+		version = sh("cd #{build_base_path};cat version | tr -d '\n'")
+
+		base_name = "#{version}-#{git_commit}"
+		dst = File.join(archive_path,base_name,"#{base_name}-#{platform}")
+		UI.message "Archiving version #{version}, #{platform} (#{git_commit}) "
+
+		UI.message "Zipping #{src_dir} to #{dst}..."
 		out_path = dst+".zip"
 		sh("rm -f \"#{out_path}\"")
 		zip(
@@ -123,7 +111,6 @@ Dir.chdir("..") do
 		debug_file_found = false
 		for pattern in debug_file_list do   
 
-puts Dir.glob(File.join(src_dir,pattern))
 			if Dir.glob(File.join(src_dir,pattern)).length > 0
 				debug_file_found = true
 				break
@@ -204,13 +191,13 @@ puts Dir.glob(File.join(src_dir,pattern))
 		desc "Android – Zip Builds"
 		lane :zip_builds do
 
-			zipIt(unity_android_withoutobb_build_path_base, File.join(archive_path,getArchiveName("android-apk")))
+			zipIt(unity_android_withoutobb_build_path_base, archive_path,"android-apk")
 
 			case google_play_mode
 				when "apkwithobb" then
-					zipIt(unity_android_withobb_build_path_base, File.join(archive_path,getArchiveName("android-apkwithobb")))
+					zipIt(unity_android_withobb_build_path_base, archive_path,"android-apkwithobb")
 				when "appbundle" then
-					zipIt(unity_android_appbundle_build_path_base,File.join(archive_path,getArchiveName("android-appbundle")))
+					zipIt(unity_android_appbundle_build_path_base,archive_path,"android-appbundle")
 			end
 		end
 
@@ -401,9 +388,9 @@ puts Dir.glob(File.join(src_dir,pattern))
 		desc "Standalone – Zip Builds"
 		lane :zip_builds do
 
-			zipIt(unity_linux_build_path_base,File.join(archive_path,getArchiveName("linux")))
-			zipIt(unity_macos_build_path_base,File.join(archive_path,getArchiveName("macos")))
-			zipIt(unity_win_build_path_base,File.join(archive_path,getArchiveName("win")))
+			zipIt(unity_linux_build_path_base,archive_path,"linux")
+			zipIt(unity_macos_build_path_base,archive_path,"macos")
+			zipIt(unity_win_build_path_base,archive_path,"win")
 		end
 
 		desc "Standalone – Sync Builds & Upload to Steam"
@@ -527,7 +514,7 @@ puts Dir.glob(File.join(src_dir,pattern))
 		desc "iOS – Zip Builds"
 		lane :zip_builds do
 
-			zipIt(ios_xcode_output_path,File.join(archive_path,getArchiveName("ios")))
+			zipIt(ios_xcode_output_path,archive_path,"ios")
 		end
 		
 		desc "iOS – Push ipa to TestFlight (Internal, skip processing)"

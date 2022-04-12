@@ -381,6 +381,7 @@ Dir.chdir("..") do
 				package:unity_macos_build_path,
 				print_log:true)
 
+			# remove zip file created by notarize
 			zip_path = "#{unity_macos_build_path}.zip"
 			File.delete(zip_path) if File.exist?(zip_path)
 
@@ -509,10 +510,13 @@ Dir.chdir("..") do
 				scheme: scheme,
 			project:store_ios_project_path)
 
+			# copy debug info to output dir, where it will be read for archiving
 			debugInfoFile = "#{app_name_short}_BurstDebugInformation_DoNotShip"
 			debug_source = File.join(unity_ios_build_path_base,debugInfoFile)
 			debug_target = File.join(ios_xcode_output_path,debugInfoFile)
-			sh("rm -rf #{debug_target}; cp -R \"#{debug_source}\" \"#{ios_xcode_output_path}/\"")
+
+			FileUtils.rm_rf(debug_target) 
+			FileUtils.cp_r(debug_source,ios_xcode_output_path) if File.exist?(debug_source)
 		end
 		desc "iOS – Zip Builds"
 		lane :zip_builds do

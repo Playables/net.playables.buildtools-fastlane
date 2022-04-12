@@ -92,13 +92,13 @@ module Fastlane
           UI.message "Build version: #{build_version}"
           cmd += ["-buildversion","#{build_version}"]
         end
-        UI.message "Building #{build_name}"
+        UI.message "Building #{build_name} for #{build_target}..."
 
         if system(*cmd)
           UI.success "Unity build finished."
 
-           sh("echo #{version} > #{File.join(build_path_parent,"version")}")
-           sh("echo #{git_commit} > #{File.join(build_path_parent,"commit")}")
+          File.write(File.join(build_path_parent,"version"), version)
+          File.write(File.join(build_path_parent,"commit"), git_commit)
         else
           UI.user_error! "Unity build failed."
         end

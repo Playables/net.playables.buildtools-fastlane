@@ -48,6 +48,8 @@ Dir.chdir("..") do
 	unity_ios_build_path_base = File.join(unity_builds_path,"ios")
 
 	ios_xcode_output_path = File.join(unity_ios_build_path_base,"ipa")
+	ios_ipa_name = "#{app_name_short}.ipa"
+	ios_ipa_path = File.join(ios_xcode_output_path,ios_ipa_name)
 
 	unity_android_appbundle_build_path = File.join(unity_android_appbundle_build_path_base,app_name_short+".aab")
 	unity_android_withobb_build_path = File.join(unity_android_withobb_build_path_base,app_name_short+".apk")
@@ -504,11 +506,12 @@ Dir.chdir("..") do
 
 			build_app(
 				output_directory:ios_xcode_output_path,
+				output_name: ios_ipa_name, 
 				xcargs: "-allowProvisioningUpdates",
 				export_team_id:ENV["IOS_DEV_TEAM_ID"],
 				silent:true,
 				scheme: scheme,
-			project:store_ios_project_path)
+				project:store_ios_project_path)
 
 			# copy debug info to output dir, where it will be read for archiving
 			debugInfoFile = "#{app_name_short}_BurstDebugInformation_DoNotShip"
@@ -526,7 +529,10 @@ Dir.chdir("..") do
 		
 		desc "iOS – Push ipa to TestFlight (Internal, skip processing)"
 		lane :upload_testflight_internal do
-			upload_to_testflight(skip_waiting_for_build_processing:true)
+			upload_to_testflight(
+				ipa:ios_ipa_path,
+				skip_waiting_for_build_processing:true,
+				)
 		end
 
 		desc "iOS – Submit App Store info (including Screenshots)"

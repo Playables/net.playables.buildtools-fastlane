@@ -40,9 +40,6 @@ module Fastlane
 
          build_path_parent = File.dirname(build_path)
 
-         sh("mkdir -p #{build_path_parent}")
-         sh("echo #{version} > #{File.join(build_path_parent,"version")}")
-
         git_commit = sh("cd #{project_path};git rev-parse HEAD | tr -d '\n'")
          UI.message "Git commit: #{git_commit}"
 
@@ -53,7 +50,6 @@ module Fastlane
             git_commit += "-withchanges"
           end
 
-         sh("echo #{git_commit} > #{File.join(build_path_parent,"commit")}")
 
         cmd = [unity_path,
           "-batchmode",
@@ -100,6 +96,9 @@ module Fastlane
 
         if system(*cmd)
           UI.success "Unity build finished."
+
+           sh("echo #{version} > #{File.join(build_path_parent,"version")}")
+           sh("echo #{git_commit} > #{File.join(build_path_parent,"commit")}")
         else
           UI.user_error! "Unity build failed."
         end

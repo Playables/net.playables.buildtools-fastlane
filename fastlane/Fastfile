@@ -514,12 +514,22 @@ Dir.chdir("..") do
 				project:store_ios_project_path)
 
 			# copy debug info to output dir, where it will be read for archiving
-			debugInfoFile = "#{app_name_short}_BurstDebugInformation_DoNotShip"
-			debug_source = File.join(unity_ios_build_path_base,debugInfoFile)
-			debug_target = File.join(ios_xcode_output_path,debugInfoFile)
+			files_to_copy = ["#{app_name_short}_BurstDebugInformation_DoNotShip","commit","version"]
 
-			FileUtils.rm_rf(debug_target) 
-			FileUtils.cp_r(debug_source,ios_xcode_output_path) if File.exist?(debug_source)
+			UI.message "Copying additional files from unity build path to xcode build output path (for archiving)."
+			UI.message "Unity build path: #{unity_ios_build_path_base}" 
+			UI.message "XCode build output path: #{ios_xcode_output_path}"
+			files_to_copy.each do |item|
+				src = File.join(unity_ios_build_path_base,item)
+				dst = File.join(ios_xcode_output_path,item)
+
+				if File.exist?(src)
+					UI.message "Copying '#{item}' ..."
+					FileUtils.rm_rf(dst) 
+					FileUtils.cp_r(src,ios_xcode_output_path)
+				end
+			end
+						
 		end
 		desc "iOS – Zip Builds"
 		lane :zip_builds do

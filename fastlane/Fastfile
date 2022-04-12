@@ -89,11 +89,11 @@ Dir.chdir("..") do
 
 	def zipIt(src_dir,archive_path,platform)
 
+		ignores = [".DS_Store","version","commit"]
 		debug_file_list = ["*_BurstDebugInformation_DoNotShip*","*.debug","*.dSYM.zip","*.pdb"]
 
-		build_base_path = File.join(src_dir,"..")
-		git_commit = sh("cd #{build_base_path};cat commit | tr -d '\n'")
-		version = sh("cd #{build_base_path};cat version | tr -d '\n'")
+		git_commit = sh("cat #{File.join(src_dir,"commit")} | tr -d '\n'")
+		version = sh("cat #{File.join(src_dir,"version")} | tr -d '\n'")
 
 		base_name = "#{version}-#{git_commit}"
 		dst = File.join(archive_path,base_name,"#{base_name}-#{platform}")
@@ -105,7 +105,7 @@ Dir.chdir("..") do
 		zip(
 		  path: src_dir,
 		  output_path:out_path,
-		  exclude: [".DS_Store"].concat(debug_file_list)
+		  exclude: [].concat(ignores).concat(debug_file_list)
 		)
 
 		debug_file_found = false
@@ -127,7 +127,7 @@ Dir.chdir("..") do
 			  path: src_dir,
 			  output_path:out_path_debug,
 			  include: debug_file_list,
-			  exclude: [".DS_Store"]
+			  exclude: [].concat(ignores)
 			)
 		end
 	end
@@ -403,7 +403,7 @@ Dir.chdir("..") do
 				FileUtils.mkdir_p dst_dir # this runs from the fastlane dir
 
 				rsync(
-					extra:"-ahrLv --delete --exclude=.DS_Store --exclude=steam_appid.txt --exclude=*_BurstDebugInformation_DoNotShip --exclude=*.pdb --exclude=*.debug",
+					extra:"-ahrLv --delete --delete-excluded --exclude={.DS_Store,/steam_appid.txt,/version,/commit,/*_BurstDebugInformation_DoNotShip,/*.pdb,/*.debug}",
 					source:(src_dir+'/').shellescape,
 				destination:(dst_dir+'/').shellescape)
 			end

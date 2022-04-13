@@ -10,11 +10,14 @@ module Fastlane
        username = params[:username]
        project_id = params[:project_id]
        channel = params[:channel]
+       version = params[:version]
 
         cmd = ["butler",
           "push",
           "#{data_path}",
           "#{username}/#{project_id}:#{channel}"]
+
+        cmd.concat(["--userversion", version]) if version
 
         UI.message "Butler push..."
 
@@ -66,7 +69,12 @@ module Fastlane
                                        description: "Channel", # a short description of this parameter
                                        verify_block: proc do |value|
                                           UI.user_error!("Channel not defined.") unless (value and not value.empty?)
-                                       end)
+                                       end),
+          FastlaneCore::ConfigItem.new(key: :version,
+                                       env_name: "FL_BUTLER_PUSH_VERSION", # The name of the environment variable
+                                       description: "Version", # a short description of this parameter
+                                       default_value: nil,
+                                       optional: true)
         ]
       end
 

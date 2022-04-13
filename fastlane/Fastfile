@@ -94,8 +94,8 @@ Dir.chdir("..") do
 		ignores = [".DS_Store","version","commit"]
 		debug_file_list = ["*_BurstDebugInformation_DoNotShip*","*.debug","*.dSYM.zip","*.pdb"]
 
-		git_commit = File.read(File.join(src_dir,"commit")).strip
-		version = File.read(File.join(src_dir,"version")).strip
+		git_commit = getBuildCommit(src_dir)
+		version = getBuildVersion(src_dir)
 
 		base_name = "#{version}-#{git_commit}"
 		dst = File.join(archive_path,base_name,"#{base_name}-#{platform}")
@@ -135,6 +135,15 @@ Dir.chdir("..") do
 			)
 		end
 	end
+
+	def getBuildVersion(build_path)
+		return File.read(File.join(build_path,"version")).strip
+	end
+
+	def getBuildCommit(build_path)
+		return File.read(File.join(build_path,"commit")).strip
+	end
+
 
 
 	#print unity_builds_path
@@ -428,14 +437,17 @@ Dir.chdir("..") do
 			butler_push(
 				data_path: unity_linux_build_path_base,
 				channel:"linux",
+				version: getBuildVersion(unity_linux_build_path_base)
 			)
 			butler_push(
 				data_path: unity_macos_build_path_base,
 				channel:"macos",
+				version: getBuildVersion(unity_macos_build_path_base)
 			)
 			butler_push(
 				data_path: unity_win_build_path_base,
 				channel:"win",
+				version: getBuildVersion(unity_win_build_path_base)
 			)
 		end
 

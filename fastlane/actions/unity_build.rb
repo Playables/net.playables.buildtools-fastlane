@@ -40,10 +40,10 @@ module Fastlane
 
          build_path_parent = File.dirname(build_path)
 
-        git_commit = sh("cd #{project_path};git rev-parse HEAD | tr -d '\n'")
+        git_commit = sh("cd #{project_path.shellescape};git rev-parse HEAD | tr -d '\n'")
          UI.message "Git commit: #{git_commit}"
 
-        git_changes = !sh("cd #{project_path};git status --porcelain | tr -d '\n'").empty?
+        git_changes = !sh("cd #{project_path.shellescape};git status --porcelain | tr -d '\n'").empty?
          UI.message "Git repository has changes: #{git_changes}"
 
          if git_changes

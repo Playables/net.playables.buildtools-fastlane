@@ -13,7 +13,7 @@ module Fastlane
 
 
         project_settings_path = File.join(project_path, "ProjectSettings","ProjectSettings.asset")
-        version = sh("grep bundleVersion \"#{project_settings_path}\" | cut -d':' -f2 | xargs | tr -d '\n'")
+        version = sh("grep bundleVersion \"#{project_settings_path.shellescape}\" | cut -d':' -f2 | xargs | tr -d '\n'")
         return version
 
         # Actions.lane_context[SharedValues::UNITY_BUILD_CUSTOM_VALUE] = "my_val"

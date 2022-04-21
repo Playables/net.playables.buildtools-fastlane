@@ -316,7 +316,9 @@ Dir.chdir("..") do
 			begin
 				build_unity
 				sign_mac
-				notarize_mac
+				if ENV["SKIP_NOTARIZE"] != "true"
+					notarize_mac
+				end
 				zip_builds
 
 				if steam_deploy_enabled

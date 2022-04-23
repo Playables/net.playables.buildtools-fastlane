@@ -39,13 +39,19 @@ Dir.chdir("..") do
 	# unity build paths
 	unity_builds_path = File.expand_path(ENV["UNITY_BUILDS_PATH"])
 
-	unity_android_appbundle_build_path_base = File.join(unity_builds_path,"android","appbundle")
-	unity_android_withobb_build_path_base = File.join(unity_builds_path,"android","with-obb")
-	unity_android_withoutobb_build_path_base = File.join(unity_builds_path,"android","without-obb")
-	unity_macos_build_path_base = File.join(unity_builds_path,"macos")
-	unity_win_build_path_base = File.join(unity_builds_path,"win")
-	unity_linux_build_path_base= File.join(unity_builds_path,"linux")
-	unity_ios_build_path_base = File.join(unity_builds_path,"ios")
+	platform_win = "win"
+	platform_macos = "macos"
+	platform_linux = "linux"
+	platform_ios = "ios"
+	platform_android = "android"
+
+	unity_android_appbundle_build_path_base = File.join(unity_builds_path,platform_android,"appbundle")
+	unity_android_withobb_build_path_base = File.join(unity_builds_path,platform_android,"with-obb")
+	unity_android_withoutobb_build_path_base = File.join(unity_builds_path,platform_android,"without-obb")
+	unity_macos_build_path_base = File.join(unity_builds_path,platform_macos)
+	unity_win_build_path_base = File.join(unity_builds_path,platform_win)
+	unity_linux_build_path_base= File.join(unity_builds_path,platform_linux)
+	unity_ios_build_path_base = File.join(unity_builds_path,platform_ios)
 
 	ios_xcode_output_path = File.join(unity_ios_build_path_base,"ipa")
 	ios_ipa_name = "#{app_name_short}.ipa"
@@ -76,11 +82,17 @@ Dir.chdir("..") do
 	store_ios_metadata_path = File.join(store_ios_path,"metadata")
 	store_ios_project_path = File.join(unity_ios_build_path,"Unity-iPhone.xcodeproj")
 
+	# itch.io
+	store_itch_content_path = File.expand_path(ENV["ITCH_CONTENT_PATH"])
+	store_itch_content_linux_path = File.join(store_itch_content_path,platform_linux)
+	store_itch_content_win_path = File.join(store_itch_content_path,platform_win)
+	store_itch_content_macos_path = File.join(store_itch_content_path,platform_macos)
+
 	# steam
 	store_steam_content_path = File.expand_path(ENV["STEAM_CONTENT_PATH"])
-	store_steam_content_linux_path = File.join(store_steam_content_path,"linux")
-	store_steam_content_win_path = File.join(store_steam_content_path,"win")
-	store_steam_content_macos_path = File.join(store_steam_content_path,"macos")
+	store_steam_content_linux_path = File.join(store_steam_content_path,platform_linux)
+	store_steam_content_win_path = File.join(store_steam_content_path,platform_win)
+	store_steam_content_macos_path = File.join(store_steam_content_path,platform_macos)
 	store_steam_vdf_path = File.expand_path(ENV["STEAM_VDF_PATH"])
 	store_steam_validate_url = "steam://validate/"+ENV["APP_STEAM_ID"]
 	steam_deploy_enabled = ENV["STEAM_DEPLOY_ENABLED"] == "true"
@@ -170,6 +182,18 @@ Dir.chdir("..") do
 			message: subject+"<br>"+message,
 			app_link: app_link
 		)
+	end
+
+
+	def syncBuilds(src_dir,dst_dir)
+		fastlane_require 'fileutils'
+		fastlane_require 'shellwords'
+		FileUtils.mkdir_p dst_dir # this runs from the fastlane dir
+
+		rsync(
+			extra:"-ahrLv --delete --delete-excluded --exclude={.DS_Store,/steam_appid.txt,/version,/commit,/*_BurstDebugInformation_DoNotShip,/*.pdb,/*.debug}",
+			source:(src_dir+'/').shellescape,
+		destination:(dst_dir+'/').shellescape)
 	end
 
 
@@ -326,7 +350,7 @@ Dir.chdir("..") do
 				end
 
 				if itch_deploy_enabled
-					push_itch
+					sync_upload_itch
 				end
 			rescue => ex
 				send_mail false,"Standalone Deploy failed",ex.to_s
@@ -413,41 +437,34 @@ Dir.chdir("..") do
 		desc "Standalone – Sync Builds & Upload to Steam"
 		lane :sync_upload_steam do
 
-
-			def sync(src_dir,dst_dir)
-				fastlane_require 'fileutils'
-				fastlane_require 'shellwords'
-				FileUtils.mkdir_p dst_dir # this runs from the fastlane dir
-
-				rsync(
-					extra:"-ahrLv --delete --delete-excluded --exclude={.DS_Store,/steam_appid.txt,/version,/commit,/*_BurstDebugInformation_DoNotShip,/*.pdb,/*.debug}",
-					source:(src_dir+'/').shellescape,
-				destination:(dst_dir+'/').shellescape)
-			end
-
-			sync(unity_linux_build_path_base,store_steam_content_linux_path);
-			sync(unity_macos_build_path_base,store_steam_content_macos_path);
-			sync(unity_win_build_path_base,store_steam_content_win_path);
+			syncBuilds(unity_linux_build_path_base,store_steam_content_linux_path);
+			syncBuilds(unity_macos_build_path_base,store_steam_content_macos_path);
+			syncBuilds(unity_win_build_path_base,store_steam_content_win_path);
 
 			upload_to_steam(
 				vdf_path: store_steam_vdf_path
 			)
 		end
-		desc "Standalone – Push with itch.io butler"
-		lane :push_itch do
+		desc "Standalone – Sync BUilds & Upload to itch.io"
+		lane :sync_upload_itch do
+
+
+			syncBuilds(unity_linux_build_path_base,store_itch_content_linux_path);
+			syncBuilds(unity_macos_build_path_base,store_itch_content_macos_path);
+			syncBuilds(unity_win_build_path_base,store_itch_content_win_path);
 
 			butler_push(
-				data_path: unity_linux_build_path_base,
+				data_path: store_itch_content_linux_path,
 				channel:"linux",
 				version: getBuildVersion(unity_linux_build_path_base)
 			)
 			butler_push(
-				data_path: unity_macos_build_path_base,
+				data_path: store_itch_content_macos_path,
 				channel:"macos",
 				version: getBuildVersion(unity_macos_build_path_base)
 			)
 			butler_push(
-				data_path: unity_win_build_path_base,
+				data_path: store_itch_content_win_path,
 				channel:"win",
 				version: getBuildVersion(unity_win_build_path_base)
 			)

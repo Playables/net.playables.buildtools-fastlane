@@ -132,13 +132,13 @@ Standalone – Zip Builds
 
 Standalone – Sync Builds & Upload to Steam
 
-### mac push_itch
+### mac sync_upload_itch
 
 ```sh
-[bundle exec] fastlane mac push_itch
+[bundle exec] fastlane mac sync_upload_itch
 ```
 
-Standalone – Push with itch.io butler
+Standalone – Sync BUilds & Upload to itch.io
 
 ----
 

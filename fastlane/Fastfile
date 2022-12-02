@@ -513,9 +513,11 @@ Dir.chdir("..") do
 		lane :set_version do
 			scheme = "Unity-iPhone"
 
-		 latest_build_number = latest_testflight_build_number(
+			version = ENV["ENABLE_IOS_VERSION_WORKAROUND"] ? nil : get_version_number(xcodeproj: store_ios_project_path, target: 'Unity-iPhone')
+
+			 latest_build_number = latest_testflight_build_number(
 				app_identifier: CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier),
-				version: get_version_number(xcodeproj: store_ios_project_path, target: 'Unity-iPhone')
+				version: version
 		)
 		 increment_build_number({build_number: latest_build_number + 1,xcodeproj:store_ios_project_path})
 		 end

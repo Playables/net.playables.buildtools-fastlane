@@ -100,6 +100,17 @@ Dir.chdir("..") do
 	#itch
 	itch_deploy_enabled = ENV["ITCH_DEPLOY_ENABLED"] == "true"
 
+	def getPassword(serviceName,accountName)
+
+		fullServiceName = "#{serviceName}:#{accountName}"
+		UI.message "Getting password for service '#{fullServiceName}', account '#{accountName}' from keychain"
+
+		cmd = "security find-generic-password -a #{accountName} -s #{fullServiceName} -w -g | tr -d '\n'"
+		
+		pw = sh( command:cmd,log:false)
+		return pw
+	end
+
 
 	def zipIt(src_dir,archive_path,platform)
 
@@ -406,13 +417,11 @@ Dir.chdir("..") do
 		desc "Standalone – Notarize Mac Build"
 		lane :notarize_mac do
 
-			serviceName = "XCODE_NOTARIZE_PASSWORD"
-			accountName = ENV["FL_NOTARIZE_USERNAME"]
-			cmd = "security find-generic-password -a #{accountName} -s #{serviceName} -w -g | tr -d '\n'"
 			#UI.message cmd
-			ENV["FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD"] = sh(
-				command:cmd,
-				log:false)
+			ENV["FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD"] = getPassword(
+				"fastlane.notarize",
+				ENV["FL_NOTARIZE_USERNAME"])
+
 
 			notarize(
 				package:unity_macos_build_path,
@@ -572,6 +581,11 @@ Dir.chdir("..") do
 		
 		desc "iOS – Push ipa to TestFlight (Internal, skip processing)"
 		lane :upload_testflight_internal do
+
+			ENV["FASTLANE_APPLE_APPLICATION_SPECIFIC_PASSWORD"] = getPassword(
+				"fastlane.testflight",
+				CredentialsManager::AppfileConfig.try_fetch_value(:apple_id))
+
 			upload_to_testflight(
 				ipa:ios_ipa_path,
 				skip_waiting_for_build_processing:true,

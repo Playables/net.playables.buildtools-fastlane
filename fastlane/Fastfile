@@ -35,6 +35,7 @@ Dir.chdir("..") do
 	
 	# app name
 	app_name_short = ENV["APP_NAME_SHORT"]
+	app_name_standalone_executable = ENV["APP_NAME_STANDALONE_EXECUTABLE"] || app_name_short
 
 	# unity build paths
 	unity_builds_path = File.expand_path(ENV["UNITY_BUILDS_PATH"])
@@ -60,9 +61,9 @@ Dir.chdir("..") do
 	unity_android_appbundle_build_path = File.join(unity_android_appbundle_build_path_base,app_name_short+".aab")
 	unity_android_withobb_build_path = File.join(unity_android_withobb_build_path_base,app_name_short+".apk")
 	unity_android_withoutobb_build_path = File.join(unity_android_withoutobb_build_path_base,app_name_short+".apk")	
-	unity_macos_build_path = File.join(unity_macos_build_path_base,app_name_short+".app")
-	unity_win_build_path = File.join(unity_win_build_path_base,app_name_short+".exe")
-	unity_linux_build_path = File.join(unity_linux_build_path_base,app_name_short)
+	unity_macos_build_path = File.join(unity_macos_build_path_base,app_name_standalone_executable+".app")
+	unity_win_build_path = File.join(unity_win_build_path_base,app_name_standalone_executable+".exe")
+	unity_linux_build_path = File.join(unity_linux_build_path_base,app_name_standalone_executable)
 	unity_ios_build_path = File.join(unity_ios_build_path_base,app_name_short)
 
 

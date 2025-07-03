@@ -116,7 +116,7 @@ Dir.chdir("..") do
 	def zipIt(src_dir,archive_path,platform)
 
 		ignores = [".DS_Store","version","commit"]
-		debug_file_list = ["*_BurstDebugInformation_DoNotShip*","*_BackUpThisFolder_ButDontShipItWithYourGame","*.debug","*.dSYM.zip","*.pdb"]
+		debug_file_list = ["*_BurstDebugInformation_DoNotShip*","*_BackUpThisFolder_ButDontShipItWithYourGame*","*.debug","*.dSYM.zip","*.pdb", "*.symbols.zip"]
 
 		git_commit = getBuildCommit(src_dir)
 		version = getBuildVersion(src_dir)

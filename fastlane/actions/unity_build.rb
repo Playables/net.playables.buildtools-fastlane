@@ -92,8 +92,13 @@ module Fastlane
           UI.message "Build version: #{build_version}"
           cmd += ["-buildversion","#{build_version}"]
         end
-        UI.message "Building #{build_name} for #{build_target}..."
 
+		if Dir.exist?(build_path_parent)
+		  UI.message "Clearing output directory: #{build_path_parent}"
+		  FileUtils.rm_rf(Dir.glob("#{build_path_parent}/*"))
+		end
+		
+        UI.message "Building #{build_name} for #{build_target}..."
         if system(*cmd)
           UI.success "Unity build finished."
 

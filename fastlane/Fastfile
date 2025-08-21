@@ -47,8 +47,8 @@ Dir.chdir("..") do
 	platform_android = "android"
 
 	unity_android_appbundle_build_path_base = File.join(unity_builds_path,platform_android,"appbundle")
-	unity_android_withobb_build_path_base = File.join(unity_builds_path,platform_android,"with-obb")
-	unity_android_withoutobb_build_path_base = File.join(unity_builds_path,platform_android,"without-obb")
+	unity_android_withobb_build_path_base = File.join(unity_builds_path,platform_android,"apk-with-obb")
+	unity_android_withoutobb_build_path_base = File.join(unity_builds_path,platform_android,"apk")
 	unity_macos_build_path_base = File.join(unity_builds_path,platform_macos)
 	unity_win_build_path_base = File.join(unity_builds_path,platform_win)
 	unity_linux_build_path_base= File.join(unity_builds_path,platform_linux)

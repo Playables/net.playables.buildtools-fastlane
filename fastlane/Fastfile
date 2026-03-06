@@ -537,12 +537,6 @@ Dir.chdir("..") do
 			scheme = "Unity-iPhone"
 
 		  
-			 get_certificates(
-			 	output_path:"certificates"
-			 )   
-			 get_provisioning_profile(
-			 	output_path: "provisioning_profiles"
-			 ) 
 			 if ENV["IOS_USE_STICKERS"] == "true"
 		    		get_provisioning_profile(app_identifier: "#{ENV['IOS_APP_IDENTIFIER']}.Stickers")
 			end
@@ -552,6 +546,9 @@ Dir.chdir("..") do
 				output_name: ios_ipa_name, 
 				xcargs: "-allowProvisioningUpdates",
 				export_team_id:ENV["IOS_DEV_TEAM_ID"],
+				export_options: {
+					"signingStyle" => "automatic"
+				},
 				silent:true,
 				scheme: scheme,
 				project:store_ios_project_path)

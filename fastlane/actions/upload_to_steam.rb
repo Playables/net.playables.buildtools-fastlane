@@ -12,7 +12,10 @@ module Fastlane
         vdf_path = params[:vdf_path]
 
         cmd = [steamcmd_path,"+login",username,"+run_app_build",File.expand_path(vdf_path),"+quit"]
-        system(*cmd)
+        steam_config_dir = File.expand_path("~/.steamcmd_fastlane")
+        FileUtils.mkdir_p(steam_config_dir)
+        
+        system({"HOME" => steam_config_dir}, *cmd)
       end
 
       #####################################################
